@@ -1,0 +1,75 @@
+# services/users_service.py
+
+class UsersService:
+    def get_user(self, user_id: int):
+        # Service logic to fetch user by ID
+        return {"id": user_id, "name": "John Doe"}
+
+
+# services/products_service.py
+
+class ProductsService:
+    def get_product(self, product_id: int):
+        # Service logic to fetch product by ID
+        return {"id": product_id, "name": "Sample Product"}
+
+
+# controllers/users_controller.py
+
+from fastapi import APIRouter, Depends
+
+from services.users_service import UsersService
+
+router = APIRouter()
+
+
+@router.get("/users/{user_id}")
+def get_user_handler(user_id: int, users_service: UsersService = Depends()):
+    user = users_service.get_user(user_id)
+    return user
+
+
+
+# controllers/products_controller.py
+
+from fastapi import APIRouter, Depends
+
+from services.products_service import ProductsService
+
+router = APIRouter()
+
+
+@router.get("/products/{product_id}")
+def get_product_handler(product_id: int, products_service: ProductsService = Depends()):
+    product = products_service.get_product(product_id)
+    return product
+
+
+# main.py
+
+from fastapi import FastAPI
+
+from controllers.users_controller import router as users_router
+from controllers.products_controller import router as products_router
+from services.users_service import UsersService
+from services.products_service import ProductsService
+
+app = FastAPI()
+
+app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(products_router, prefix="/api/products", tags=["products"])
+
+
+@app.on_event("startup")
+async def startup():
+    # Dependency Injection setup
+    app.users_service = UsersService()
+    app.products_service = ProductsService()
+    
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Clean up resources if needed
+    pass
+
+
