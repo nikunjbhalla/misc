@@ -73,3 +73,62 @@ async def shutdown():
     pass
 
 
+
+# main.py
+
+from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+from controllers.users_controller import router as users_router
+from controllers.products_controller import router as products_router
+from services.users_service import UsersService
+from services.products_service import ProductsService
+
+app = FastAPI()
+
+app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(products_router, prefix="/api/products", tags=["products"])
+
+
+@app.on_event("startup")
+async def startup():
+    # Dependency Injection setup
+    app.users_service = UsersService()
+    app.products_service = ProductsService()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Clean up resources if needed
+    pass
+
+
+# Custom Exception Handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Invalid request parameters"},
+    )
+
+
+# Generate OpenAPI JSON Schema with Customized Information
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Your API Name",
+        version="1.0.0",
+        description="Your API Description",
+        routes=app.routes,
+    )
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
+
