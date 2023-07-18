@@ -1,0 +1,17 @@
+import re
+
+def remove_email_headers_and_footers(email_body):
+    # Define regular expressions to match common email headers and footers
+    header_regex = r"^(From:|To:|Subject:|Cc:|Bcc:|Sent:|Received:|Date:|Return-Path:|Received-From:|X-Mailer:|X-Received:|X-Sender:|X-Priority:|X-MimeOLE:|Content-Type:|Content-Transfer-Encoding:|MIME-Version:|Message-ID:|Reply-To:|Organization:|User-Agent:|X-Originating-IP:|X-Originating-Email:|List-Unsubscribe:|List-Id:|List-Archive:|List-Post:|List-Help:|List-Subscribe:|X-AntiAbuse:)"
+    footer_regex = r"^(--|___|\*\*\*|===|___|__)"
+
+    # Split the email body into lines
+    lines = email_body.split('\n')
+
+    # Remove lines that match the header or footer regex
+    cleaned_lines = [line for line in lines if not re.match(header_regex, line) and not re.match(footer_regex, line)]
+
+    # Join the cleaned lines back into a single string
+    cleaned_email_body = '\n'.join(cleaned_lines)
+
+    return cleaned_email_body
