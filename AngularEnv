@@ -1,0 +1,57 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable()
+export class ConfigurationService {
+  private configUrl = 'assets/config.json';
+
+  constructor(private http: HttpClient) {}
+
+  getConfig(): Observable<any> {
+    return this.http.get<any>(this.configUrl);
+  }
+}
+
+
+
+import { enableProdMode } from '@angular/core';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app/app.module';
+import { environment } from './environments/environment';
+import { ConfigurationService } from './app/configuration.service';
+
+if (environment.production) {
+  enableProdMode();
+}
+
+ConfigurationService.getConfig().subscribe(config => {
+  platformBrowserDynamic([{ provide: 'APP_CONFIG', useValue: config }])
+    .bootstrapModule(AppModule)
+    .catch(err => console.error(err));
+});
+
+
+
+import { Component } from '@angular/core';
+import { ConfigurationService } from './configuration.service';
+
+@Component({
+  selector: 'app-root',
+  template: `
+    <h1>API URL: {{ apiUrl }}</h1>
+    <h2>Enable Debug: {{ enableDebug }}</h2>
+  `
+})
+export class AppComponent {
+  apiUrl: string;
+  enableDebug: boolean;
+
+  constructor(private configService: ConfigurationService) {
+    configService.getConfig().subscribe(config => {
+      this.apiUrl = config.apiUrl;
+      this.enableDebug = config.enableDebug;
+    });
+  }
+}
+
