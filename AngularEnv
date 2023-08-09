@@ -1,13 +1,39 @@
-Introduction:
-In the fast-paced realm of data science, where experiments never seem to stop and projects resemble an exciting rollercoaster ride, having the right tools can make all the difference. That's where our dynamic duo steps in – Git and Jira! These powerhouses are more than just a quirky pairing; they are the unsung heroes of every data scientist's development process. In this article, we'll take a closer look at how Git and Jira work their magic, empowering data scientists to conquer complexity, collaborate effortlessly, and deliver remarkable results. So, buckle up and join us on this exhilarating journey through the world of data science development!
+from flask import Flask, Request
 
-Git - The Time-Traveling Wizard:
-Imagine Git as the Gandalf of version control, granting data scientists the power to travel back and forth through their code's history. Made a mistake? No problem! Git's got your back with its magical ability to revert to previous versions and save the day. With Git as your ally, experimenting fearlessly and making progress with confidence becomes a reality.
-Jira - The Task Management Marvel:
-Meet Jira, the super-organized manager that keeps your data science projects on track. Like a skilled conductor, Jira orchestrates tasks, deadlines, and team collaborations with ease. Its customizable boards and workflows ensure everyone knows their role and follows the development symphony. Say goodbye to chaos and embrace a harmonious project management experience!
-Collaboration - The Avengers Assemble:
-Picture this: A team of data scientists, each armed with their own set of skills, collaborating effortlessly like the Avengers. Git and Jira are the communication superhighway that brings them together. From sassy comments to insightful suggestions, Git enables seamless code reviews, while Jira provides a platform for team members to coordinate and align their efforts. Together, they create an environment where collaboration flourishes, making the impossible possible.
-Reproducibility - The Sherlock Holmes Approach:
-In the mystery-filled realm of data science, reproducibility is the detective that validates findings and ensures credibility. Git plays the role of Sherlock Holmes, leaving behind a trail of evidence (commit history) that leads to the final discovery. With this meticulous record-keeping, data scientists can confidently retrace their steps, solving the case of reproducibility with ease.
-Conclusion:
-In the ever-evolving world of data science, Git and Jira stand tall as the unbeatable combination that empowers data scientists to achieve greatness. Git's version control wizardry and Jira's task management marvel bring order to the chaos, enabling seamless collaboration and fostering reproducibility. Together, they equip data scientists with the tools to navigate the twists and turns of the development process, ensuring remarkable outcomes and memorable successes. So, dear data scientists, embrace this dynamic duo, and let Git and Jira be your guiding lights on the path to data science excellence!
+app = Flask(__name__)
+
+class MockRequestContext:
+    def __init__(self, headers=None):
+        self.headers = headers or {}
+
+    def __enter__(self):
+        self._original_request = app.request_context(environ={
+            'HTTP_USER_AGENT': self.headers.get('User-Agent', ''),
+            'HTTP_ACCEPT_LANGUAGE': self.headers.get('Accept-Language', ''),
+            # Add more headers here as needed
+        })
+        self._original_request.push()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._original_request.pop()
+
+
+
+from mock_request import MockRequestContext
+from flask import Flask
+
+app = Flask(__name__)
+
+# Create a function that uses the mock request
+def use_mock_request():
+    with MockRequestContext(headers={'User-Agent': 'My User Agent'}):
+        from flask import request
+
+        # Now you can use 'request' as if it's the actual Flask request object
+        user_agent = request.headers.get('User-Agent')
+        print(f"User-Agent from mock request: {user_agent}")
+
+# Call the function
+if __name__ == '__main__':
+    use_mock_request()
+
