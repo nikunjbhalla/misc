@@ -1,0 +1,34 @@
+import re
+import requests
+
+def get_pypi_url(package_name, package_version):
+    return f"https://pypi.org/project/{package_name}/{package_version}/"
+
+def get_download_url(package_name, package_version):
+    response = requests.get(f"https://pypi.org/pypi/{package_name}/{package_version}/json")
+    if response.status_code == 200:
+        data = response.json()
+        releases = data.get("releases", {})
+        release_info = releases.get(package_version)
+        if release_info:
+            download_info = release_info[0]
+            return download_info["url"]
+    return None
+
+def main(requirements_file):
+    with open(requirements_file, "r") as file:
+        lines = file.readlines()
+
+    for line in lines:
+        match = re.match(r"^([^\s==]+)==(.+)$", line.strip())
+        if match:
+            package_name, package_version = match.groups()
+            pypi_url = get_pypi_url(package_name, package_version)
+            download_url = get_download_url(package_name, package_version)
+            print(f"Package: {package_name} {package_version}")
+            print(f"PyPI URL: {pypi_url}")
+            print(f"Download URL: {download_url}\n")
+
+if __name__ == "__main__":
+    requirements_file = "path/to/requirements.txt"
+    main(requirements_file)
