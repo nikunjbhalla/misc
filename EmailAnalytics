@@ -1,82 +1,66 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+from gensim import corpora, models
+from gensim.models import LsiModel
+from gensim.models.coherencemodel import CoherenceModel
 
-# Sample email data
-data = {
-    'timestamp': ['2023-07-22 08:30:00', '2023-07-22 09:15:00', '2023-07-22 10:00:00', '2023-07-22 11:45:00', '2023-07-22 12:30:00'],
-    'email': ['sender1@example.com', 'sender2@example.com', 'sender1@example.com', 'sender3@example.com', 'sender2@example.com'],
-    'subject': ['Subject 1', 'Subject 2', 'Subject 3', 'Subject 4', 'Subject 5'],
-    'body': ['...', '...', '...', '...', '...']
-}
+# Assuming 'corpus' is a list of preprocessed email texts
+dictionary = corpora.Dictionary(corpus)
+corpus_bow = [dictionary.doc2bow(doc) for doc in corpus]
 
-df = pd.DataFrame(data)
+# LSA model
+lsa_model = LsiModel(corpus_bow, id2word=dictionary, num_topics=5)
 
-# Convert the 'timestamp' column to datetime object
-df['timestamp'] = pd.to_datetime(df['timestamp'])
+# Print topics
+topics = lsa_model.print_topics()
+for topic in topics:
+    print(topic)
 
-# Data Summary and Basic Statistics
-print("Data Summary:")
-print(df.info())
-print(df.describe())
 
-# Time-based Analysis
-email_traffic = df.groupby(df['timestamp'].dt.date).size()
-print("Email Traffic Over Time:")
-print(email_traffic)
 
-# Plot email traffic against time
-plt.figure(figsize=(10, 6))
-plt.plot(email_traffic.index, email_traffic.values, marker='o', linestyle='-', color='blue')
-plt.xlabel('Date')
-plt.ylabel('Email Count')
-plt.title('Email Traffic Over Time')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-plt.show()
 
-# Sender and Recipient Analysis
-sender_counts = df['email'].value_counts()
-print("Number of Emails Sent by Each Sender:")
-print(sender_counts)
 
-# Plot the sender counts
-plt.figure(figsize=(10, 6))
-plt.bar(sender_counts.index, sender_counts.values)
-plt.xlabel('Sender Email')
-plt.ylabel('Count')
-plt.title('Number of Emails Sent by Each Sender')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-plt.show()
+from gensim import corpora, models
+from gensim.models import HdpModel
 
-# Subject and Content Analysis
-df['subject_length'] = df['subject'].apply(len)
-df['body_length'] = df['body'].apply(len)
+# Assuming 'corpus' is a list of preprocessed email texts
+dictionary = corpora.Dictionary(corpus)
+corpus_bow = [dictionary.doc2bow(doc) for doc in corpus]
 
-print("Subject and Content Analysis:")
-print("Average Subject Length:", df['subject_length'].mean())
-print("Average Body Length:", df['body_length'].mean())
+# HDP model
+hdp_model = HdpModel(corpus_bow, id2word=dictionary)
 
-# Visualization
-plt.figure(figsize=(8, 6))
-sns.histplot(df['subject_length'], bins=20, kde=True)
-plt.xlabel('Subject Length')
-plt.ylabel('Count')
-plt.title('Distribution of Subject Length')
-plt.tight_layout()
-plt.show()
+# Print topics
+topics = hdp_model.print_topics()
+for topic in topics:
+    print(topic)
 
-# Email Frequency Analysis
-day_of_week_counts = df['timestamp'].dt.day_name().value_counts()
-print("Email Frequency by Day of the Week:")
-print(day_of_week_counts)
 
-# Plot the email frequency by day of the week
-plt.figure(figsize=(8, 6))
-sns.barplot(x=day_of_week_counts.index, y=day_of_week_counts.values)
-plt.xlabel('Day of the Week')
-plt.ylabel('Email Count')
-plt.title('Email Frequency by Day of the Week')
-plt.tight_layout()
-plt.show()
+
+
+
+
+from gensim import corpora, models
+from lda2vec import Lda2Vec
+
+# Assuming 'corpus' is a list of preprocessed email texts
+document_lengths = [len(doc) for doc in corpus]
+
+# Create a corpus in the required format
+corpus = [(i, doc) for i, doc in enumerate(corpus)]
+
+# Initialize the model
+model = Lda2Vec(corpus, num_topics=5, n_words=100)
+
+# Fit the model
+model.fit(corpus, document_lengths)
+
+# Get topic vectors
+topic_vectors = model.doc_topic_
+
+# Print topic vectors for documents
+for i, vector in enumerate(topic_vectors):
+    print(f"Document {i}: {vector}")
+
+
+
+
+
