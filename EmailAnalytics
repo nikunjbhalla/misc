@@ -1,66 +1,33 @@
-from gensim import corpora, models
-from gensim.models import LsiModel
+from gensim.models.ldamodel import LdaModel
 from gensim.models.coherencemodel import CoherenceModel
 
-# Assuming 'corpus' is a list of preprocessed email texts
-dictionary = corpora.Dictionary(corpus)
-corpus_bow = [dictionary.doc2bow(doc) for doc in corpus]
+# Assuming you already have trained an LDA model and have access to it as 'lda_model'
+# Example of LDA training: lda_model = LdaModel(corpus, num_topics=10, id2word=dictionary)
 
-# LSA model
-lsa_model = LsiModel(corpus_bow, id2word=dictionary, num_topics=5)
+# Create a list to store coherence values for each topic
+coherence_values = []
 
-# Print topics
-topics = lsa_model.print_topics()
-for topic in topics:
-    print(topic)
+# Iterate through topics and calculate coherence for each
+for topic_id in range(lda_model.num_topics):
+    # Get the terms associated with the topic
+    topic_terms = lda_model.get_topic_terms(topic_id)
+    
+    # Convert the topic's term distribution into a list of term IDs
+    term_ids = [term_id for term_id, _ in topic_terms]
+    
+    # Convert term IDs to term words using the model's id2word dictionary
+    topic_terms_list = [lda_model.id2word[term_id] for term_id in term_ids]
+    
+    # Create a CoherenceModel for the topic using the terms
+    coherence_model = CoherenceModel(
+        topics=[topic_terms_list],
+        texts=texts,  # Replace 'texts' with your document-term matrix or text data
+        dictionary=dictionary,  # Replace 'dictionary' with your dictionary
+        coherence='c_v'  # You can use different coherence measures like 'u_mass', 'c_uci', etc.
+    )
+    
+    # Get the coherence value for the topic and append to the list
+    coherence_value = coherence_model.get_coherence()
+    coherence_values.append(coherence_value)
 
-
-
-
-
-from gensim import corpora, models
-from gensim.models import HdpModel
-
-# Assuming 'corpus' is a list of preprocessed email texts
-dictionary = corpora.Dictionary(corpus)
-corpus_bow = [dictionary.doc2bow(doc) for doc in corpus]
-
-# HDP model
-hdp_model = HdpModel(corpus_bow, id2word=dictionary)
-
-# Print topics
-topics = hdp_model.print_topics()
-for topic in topics:
-    print(topic)
-
-
-
-
-
-
-from gensim import corpora, models
-from lda2vec import Lda2Vec
-
-# Assuming 'corpus' is a list of preprocessed email texts
-document_lengths = [len(doc) for doc in corpus]
-
-# Create a corpus in the required format
-corpus = [(i, doc) for i, doc in enumerate(corpus)]
-
-# Initialize the model
-model = Lda2Vec(corpus, num_topics=5, n_words=100)
-
-# Fit the model
-model.fit(corpus, document_lengths)
-
-# Get topic vectors
-topic_vectors = model.doc_topic_
-
-# Print topic vectors for documents
-for i, vector in enumerate(topic_vectors):
-    print(f"Document {i}: {vector}")
-
-
-
-
-
+# Now, 'coherence_values' contains coherence values for each topic
