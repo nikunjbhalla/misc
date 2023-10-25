@@ -1,39 +1,43 @@
-from flask import Flask, Request
+import streamlit as st
+from authlib.integrations.base_client import OAuth
+from authlib.integrations.requests_client import OAuth2Session
+from authlib.integrations.starlette_client import StarletteRemoteApp
+from fastapi import FastAPI, Request
+from starlette.middleware.sessions import SessionMiddleware
 
-app = Flask(__name__)
+# OIDC parameters
+client_id = 'YOUR_CLIENT_ID'
+client_secret = 'YOUR_CLIENT_SECRET'
+authorization_endpoint = 'OIDC_AUTHORIZATION_ENDPOINT'
+token_endpoint = 'OIDC_TOKEN_ENDPOINT'
+redirect_uri = 'YOUR_REDIRECT_URI'
+scope = 'openid profile email'
 
-class MockRequestContext:
-    def __init__(self, headers=None):
-        self.headers = headers or {}
+# Create a FastAPI app for handling redirects
+app = FastAPI()
 
-    def __enter__(self):
-        self._original_request = app.request_context(environ={
-            'HTTP_USER_AGENT': self.headers.get('User-Agent', ''),
-            'HTTP_ACCEPT_LANGUAGE': self.headers.get('Accept-Language', ''),
-            # Add more headers here as needed
-        })
-        self._original_request.push()
+# Use SessionMiddleware for session management
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key")
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self._original_request.pop()
+# Create an OAuth2Session
+oauth = OAuth2Session(client_id, client_secret, scope=scope)
 
+@app.get("/")
+def index():
+    if 'token' not in st.session:
+        st.write("Please log in to continue.")
+        authorization_url, _ = oauth.create_authorization_url(authorization_endpoint)
+        st.write(f"[Login]({authorization_url})")
+    else:
+        st.write("You are logged in.")
+        # You can display user information here.
 
+@app.get("/callback")
+def callback(request: Request):
+    # Handle the callback from the OIDC provider
+    token = oauth.fetch_access_token(token_endpoint)
+    st.session['token'] = token
 
-from mock_request import MockRequestContext
-from flask import Flask
-
-app = Flask(__name__)
-
-# Create a function that uses the mock request
-def use_mock_request():
-    with MockRequestContext(headers={'User-Agent': 'My User Agent'}):
-        from flask import request
-
-        # Now you can use 'request' as if it's the actual Flask request object
-        user_agent = request.headers.get('User-Agent')
-        print(f"User-Agent from mock request: {user_agent}")
-
-# Call the function
-if __name__ == '__main__':
-    use_mock_request()
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
