@@ -1,231 +1,73 @@
-from fastapi import FastAPI, HTTPException
-from typing import List
-import shutil
-import os
-from datetime import datetime
-
-app = FastAPI()
-
-# Dictionary to store model filenames, their paths, and last access time.
-models = {}
-
-
-def load_model(model_name: str):
-    # Simulating model loading from S3 and returning the model path.
-    # Replace this with actual code to download the model from S3.
-    # For this example, let's assume the model files are stored in the "models" folder.
-    model_path = os.path.join("models", f"{model_name}.pt")
-    if not os.path.exists(model_path):
-        raise HTTPException(status_code=404, detail="Model not found")
-
-    # Update the access time for the loaded model.
-    models[model_name]["last_accessed"] = datetime.now()
-
-    return model_path
-
-
-@app.post("/load_model/{model_name}")
-async def load_and_manage_model(model_name: str):
-    global models
-
-    # Load the model and get its path from S3 (for demonstration purposes).
-    model_path = load_model(model_name)
-
-    # If the model is already loaded, update the access time and return.
-    if model_name in models:
-        models[model_name]["last_accessed"] = datetime.now()
-        return {"message": f"Model '{model_name}' was already loaded and its access time was updated."}
-
-    # If we already have 5 models loaded, eject the oldest one.
-    if len(models) >= 5:
-        oldest_model_name = min(models, key=lambda k: models[k]["last_accessed"])
-        oldest_model_path = models.pop(oldest_model_name)["path"]
-        os.remove(oldest_model_path)
-
-    # Add the new model to the dictionary.
-    models[model_name] = {"path": model_path, "last_accessed": datetime.now()}
-
-    return {"message": f"Model '{model_name}' loaded successfully."}
-
-
-@app.get("/get_loaded_models/")
-async def get_loaded_models() -> List[str]:
-    return list(models.keys())
-
-
-@app.on_event("shutdown")
-async def cleanup():
-    # Delete all model files when the server is shut down.
-    for model_info in models.values():
-        os.remove(model_info["path"])
-
-
-
-
-# services/users_service.py
-
-class UsersService:
-    def get_user(self, user_id: int):
-        # Service logic to fetch user by ID
-        return {"id": user_id, "name": "John Doe"}
-
-
-# services/products_service.py
-
-class ProductsService:
-    def get_product(self, product_id: int):
-        # Service logic to fetch product by ID
-        return {"id": product_id, "name": "Sample Product"}
-
-
-# controllers/users_controller.py
-
-from fastapi import APIRouter, Depends
-
-from services.users_service import UsersService
-
-router = APIRouter()
-
-
-@router.get("/users/{user_id}")
-def get_user_handler(user_id: int, users_service: UsersService = Depends()):
-    user = users_service.get_user(user_id)
-    return user
-
-
-
-# controllers/products_controller.py
-
-from fastapi import APIRouter, Depends
-
-from services.products_service import ProductsService
-
-router = APIRouter()
-
-
-@router.get("/products/{product_id}")
-def get_product_handler(product_id: int, products_service: ProductsService = Depends()):
-    product = products_service.get_product(product_id)
-    return product
-
-
-# main.py
-
-from fastapi import FastAPI
-
-from controllers.users_controller import router as users_router
-from controllers.products_controller import router as products_router
-from services.users_service import UsersService
-from services.products_service import ProductsService
-
-app = FastAPI()
-
-app.include_router(users_router, prefix="/api/users", tags=["users"])
-app.include_router(products_router, prefix="/api/products", tags=["products"])
-
-
-@app.on_event("startup")
-async def startup():
-    # Dependency Injection setup
-    app.users_service = UsersService()
-    app.products_service = ProductsService()
-    
-
-@app.on_event("shutdown")
-async def shutdown():
-    # Clean up resources if needed
-    pass
-
-
-
-# main.py
-
-from fastapi import FastAPI
-from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-
-from controllers.users_controller import router as users_router
-from controllers.products_controller import router as products_router
-from services.users_service import UsersService
-from services.products_service import ProductsService
-
-app = FastAPI()
-
-app.include_router(users_router, prefix="/api/users", tags=["users"])
-app.include_router(products_router, prefix="/api/products", tags=["products"])
-
-
-@app.on_event("startup")
-async def startup():
-    # Dependency Injection setup
-    app.users_service = UsersService()
-    app.products_service = ProductsService()
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    # Clean up resources if needed
-    pass
-
-
-# Custom Exception Handler
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=400,
-        content={"detail": "Invalid request parameters"},
-    )
-
-
-# Generate OpenAPI JSON Schema with Customized Information
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title="Your API Name",
-        version="1.0.0",
-        description="Your API Description",
-        routes=app.routes,
-    )
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
-app.openapi = custom_openapi
-
-
-
-
-from cryptography import x509
-from cryptography.hazmat.primitives import serialization
-
-# Load the certificate
-with open('path_to_certificate.pem', 'rb') as cert_file:
-    cert_data = cert_file.read()
-    cert = x509.load_pem_x509_certificate(cert_data)
-
-# Load the private key
-with open('path_to_private_key.pem', 'rb') as key_file:
-    key_data = key_file.read()
-    private_key = serialization.load_pem_private_key(key_data, password=None)
-
-
-
-import datetime
-import jwt
-
-# Define the JWT token payload
-payload = {
-    'iss': 'issuer',
-    'sub': 'subject',
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
-    # Add any additional claims as needed
+import java.util.ArrayList;
+import java.util.List;
+
+public class SimpleIntegerListEncoderDecoder {
+
+    public static List<Integer> encodeText(String text) {
+        // Assuming you have your encoding logic here using com.knuddels.jtokkit.api.Encoding
+        // For this example, let's simulate encoding by converting words to integers
+        List<Integer> tokens = tokenizeText(text);
+        return tokens;
+    }
+
+    public static String decodeTokens(List<Integer> tokens) {
+        // Assuming you have your decoding logic here using com.knuddels.jtokkit.api.Encoding
+        // For this example, let's simulate decoding by converting integers back to words
+        StringBuilder decodedText = new StringBuilder();
+        for (Integer token : tokens) {
+            decodedText.append(token).append(" ");
+        }
+        return decodedText.toString().trim();
+    }
+
+    public static List<Integer> tokenizeText(String text) {
+        // Split the text based on common sentence-ending punctuation marks
+        String[] sentences = text.split("[.!?]");
+        List<Integer> tokens = new ArrayList<>();
+
+        for (String sentence : sentences) {
+            // Tokenize each sentence into integers (you can use your encoding logic here)
+            String[] words = sentence.trim().split("\\s+");
+            for (String word : words) {
+                // Simulating encoding by converting words to integers
+                int encodedToken = word.hashCode(); // Replace with your actual encoding logic
+                tokens.add(encodedToken);
+            }
+        }
+
+        return tokens;
+    }
+
+    public static List<List<Integer>> splitTextIntoChunks(List<Integer> tokens, int maxTokensPerChunk) {
+        List<List<Integer>> chunks = new ArrayList<>();
+
+        for (int i = 0; i < tokens.size(); i += maxTokensPerChunk) {
+            int endIndex = Math.min(i + maxTokensPerChunk, tokens.size());
+            List<Integer> chunk = tokens.subList(i, endIndex);
+            chunks.add(chunk);
+        }
+
+        return chunks;
+    }
+
+    public static void main(String[] args) {
+        String inputText = "Your large input text here. Another sentence? Yes! Yet another.";
+        int maxTokensPerChunk = 512;
+
+        // Encode the text
+        List<Integer> encodedTokens = encodeText(inputText);
+
+        // Split the encoded tokens into chunks
+        List<List<Integer>> tokenChunks = splitTextIntoChunks(encodedTokens, maxTokensPerChunk);
+
+        // Decode each chunk and reconstruct the original text
+        StringBuilder reconstructedText = new StringBuilder();
+        for (List<Integer> chunk : tokenChunks) {
+            String decodedChunk = decodeTokens(chunk);
+            reconstructedText.append(decodedChunk).append(" ");
+        }
+
+        System.out.println("Original Text: " + inputText);
+        System.out.println("Reconstructed Text: " + reconstructedText.toString().trim());
+    }
 }
-
-# Sign the payload with the private key
-token = jwt.encode(payload, private_key, algorithm='RS256')
-
-
-
-
