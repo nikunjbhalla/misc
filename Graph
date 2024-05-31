@@ -1,0 +1,131 @@
+import openai
+import re
+from neo4j import GraphDatabase
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Set up OpenAI API key
+openai.api_key = "your-openai-api-key"
+
+# Neo4j connection
+uri = "bolt://localhost:7687"
+driver = GraphDatabase.driver(uri, auth=("neo4j", "password"))
+
+# Sentence transformer model
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def split_document_into_chunks(text, max_chunk_size=500):
+    sentences = text.split('. ')
+    chunks = []
+    current_chunk = []
+
+    for sentence in sentences:
+        if len(' '.join(current_chunk + [sentence])) <= max_chunk_size:
+            current_chunk.append(sentence)
+        else:
+            chunks.append(' '.join(current_chunk))
+            current_chunk = [sentence]
+
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+    
+    return chunks
+
+def extract_entities_and_relationships(chunk):
+    prompt = f"Extract entities and their relationships from the following text:\n\n{chunk}\n\nEntities and relationships:"
+    response = openai.Completion.create(
+        engine="davinci",  # or another engine like "gpt-3.5-turbo"
+        prompt=prompt,
+        max_tokens=150,
+        temperature=0,
+        n=1,
+        stop=["\n"]
+    )
+    return response.choices[0].text.strip()
+
+def parse_extracted_data(extracted_data):
+    entities = re.findall(r"- (\w+) \((\w+)\)", extracted_data)
+    relationships = re.findall(r"- (\w+) (\w+ \w+) (\w+)", extracted_data)
+    return entities, relationships
+
+def store_entities(tx, entities):
+    for entity, label in entities:
+        tx.run("MERGE (e:Entity {name: $name, label: $label})", name=entity, label=label)
+
+def store_relationships(tx, relationships):
+    for ent1, rel, ent2 in relationships:
+        tx.run("""
+        MATCH (a:Entity {name: $ent1}), (b:Entity {name: $ent2})
+        MERGE (a)-[r:%s]->(b)
+        """ % rel, ent1=ent1, ent2=ent2)
+
+def generate_and_store_embeddings(tx, entities):
+    entity_names = [entity for entity, label in entities]
+    embeddings = embedding_model.encode(entity_names)
+
+    for entity, embedding in zip(entity_names, embeddings):
+        tx.run("MERGE (e:Entity {name: $name}) "
+               "SET e.embedding = $embedding",
+               name=entity, embedding=embedding.tolist())
+
+def get_embedding(tx, name):
+    result = tx.run("MATCH (e:Entity {name: $name}) RETURN e.embedding AS embedding", name=name)
+    record = result.single()
+    if record:
+        return np.array(record["embedding"])
+    return None
+
+def get_all_embeddings(tx):
+    result = tx.run("MATCH (e:Entity) RETURN e.name AS name, e.embedding AS embedding")
+    entities = []
+    embeddings = []
+    for record in result:
+        entities.append(record["name"])
+        embeddings.append(np.array(record["embedding"]))
+    return entities, np.array(embeddings)
+
+def find_similar_entities(name):
+    with driver.session() as session:
+        target_embedding = session.read_transaction(get_embedding, name)
+        if target_embedding is None:
+            return []
+
+        entities, embeddings = session.read_transaction(get_all_embeddings)
+        similarities = cosine_similarity([target_embedding], embeddings)[0]
+        similar_entities = sorted(zip(entities, similarities), key=lambda x: x[1], reverse=True)
+
+        return [entity for entity, similarity in similar_entities if similarity > 0.5 and entity != name]
+
+def generate_response_with_embeddings(name, query):
+    similar_entities = find_similar_entities(name)
+    context = f"{name} is related to {', '.join(similar_entities)}."
+    return generate_response(context, query)
+
+def generate_response(context, query):
+    input_text = f"Context: {context}\nQuery: {query}\nResponse:"
+    input_ids = tokenizer.encode(input_text, return_tensors='pt')
+    output = model.generate(input_ids, max_length=100)
+    return tokenizer.decode(output[0], skip_special_tokens=True)
+
+# Main process
+document_text = "Your document text here..."
+chunks = split_document_into_chunks(document_text)
+
+all_entities = []
+all_relationships = []
+
+for chunk in chunks:
+    extracted_data = extract_entities_and_relationships(chunk)
+    entities, relationships = parse_extracted_data(extracted_data)
+    all_entities.extend(entities)
+    all_relationships.extend(relationships)
+
+with driver.session() as session:
+    session.write_transaction(store_entities, all_entities)
+    session.write_transaction(store_relationships, all_relationships)
+    session.write_transaction(generate_and_store_embeddings, all_entities)
+
+name = "Alice"
+user_query = "Who does Alice know?"
+final_response = generate_response_with_embeddings(name, user_query)
+print(final_response)  # Final response using context enhanced by embeddings
